@@ -10,6 +10,8 @@ import com.example.Notes.service.PersonService;
 import com.example.Notes.util.PersonEmailValidator;
 import com.example.Notes.util.PersonValidatorUsername;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -53,6 +55,10 @@ public class PersonController {
             summary = "Вывод всех пользователей",
             description = "Позволяет вывести всех пользователей системы"
     )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Список пользователей успешно получен."),
+            @ApiResponse(responseCode = "404", description = "Пользователи не найдены.")
+    })
     public ResponseEntity<List<PersonFullInfoDTO>> findAllPerson() {
         List<PersonFullInfoDTO> personDTOS =
                 personService.getAllPerson()
@@ -66,6 +72,10 @@ public class PersonController {
             summary = "Вывод пользователя с определенным id",
             description = "Позволяет вывести конкретного пользователя"
     )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Успешный запрос. Возвращает информацию о пользователе."),
+            @ApiResponse(responseCode = "404", description = "Пользователь с указанным id не найден.")
+    })
     public ResponseEntity<PersonFullInfoDTO> getOnePerson(@PathVariable Long id) {
         Person person = personService.getOnePerson(id);
         PersonFullInfoDTO personFullInfoDTO = convertToPersonFullInfo(person);
@@ -77,26 +87,44 @@ public class PersonController {
             summary = "Вывод заметок принадлежащие конкретному пользователю",
             description = "Позволяет вывести заметки принадлежащие конкретному пользователю"
     )
-    public ResponseEntity<?> getNoteByPerson(@PathVariable Long id) {
-        Person person = personService.getOnePerson(id);
-        personService.getNoteByPerson(person.getId());
-        return new ResponseEntity<>(person.getNotes(), HttpStatus.OK);
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Успешный запрос. Возвращает заметки пользователя."),
+            @ApiResponse(responseCode = "404", description = "Заметки у пользователя отсутствуют.")
+    })
+    public ResponseEntity<?> getNoteByPersonId(@PathVariable Long id) {
+        try {
+            Person person = personService.getOnePerson(id);
+            personService.getNoteByPerson(person.getId());
+            return new ResponseEntity<>(person.getNotes(), HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error find note by person");
+        }
+
     }
 
     @PostMapping("/update/{id}")
     @Operation(
-            summary = "Редактирование пользователя с определенным id",
-            description = "Позволяет редактировать профиль конкретного пользователя"
+            summary = "Редактирование пользователя с определенным id.",
+            description = "Позволяет редактировать профиль конкретного пользователя."
     )
-    public ResponseEntity<HttpStatus> updatePerson(@RequestBody @Valid PersonDTO personDTO,
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Успешный запрос. Ваши данные обновлены."),
+            @ApiResponse(responseCode = "400", description = "Произошла ошибка. Ваши данные не обновлены. ")
+    })
+    public ResponseEntity<?> updatePerson(@RequestBody @Valid PersonDTO personDTO,
                                                    BindingResult bindingResult, @PathVariable Long id, Principal principal) {
         personValidatorUsername.validate(personDTO, bindingResult);
         personEmailValidator.validate(personDTO, bindingResult);
         if(bindingResult.hasErrors()) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body("Validation errors");
         }
-        personService.updatePerson(id,convertToPerson(personDTO), principal);
-        return ResponseEntity.ok(HttpStatus.OK);
+        try {
+            personService.updatePerson(id,convertToPerson(personDTO), principal);
+            return ResponseEntity.status(HttpStatus.OK).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating person");
+        }
+
     }
 
 

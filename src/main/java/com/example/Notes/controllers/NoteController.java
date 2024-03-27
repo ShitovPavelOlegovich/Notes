@@ -5,6 +5,8 @@ import com.example.Notes.DTO.NoteDTO;
 import com.example.Notes.models.Note;
 import com.example.Notes.service.NoteService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -38,12 +40,22 @@ public class NoteController {
             summary = "Вывод всех заметок",
             description = "Позволяет вывести все заметки системы"
     )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Список заметок успешно получен."),
+            @ApiResponse(responseCode = "404", description = "Заметки не найдены.")
+    })
     public ResponseEntity<List<NoteDTO>> findAllNotes() {
-        List<NoteDTO> noteDTOList =
-                noteService.getAllNotes()
-                        .stream().map(this::convertToNoteDTO)
-                        .collect(Collectors.toList());
-        return new ResponseEntity<>(noteDTOList, HttpStatus.OK);
+        try {
+            List<NoteDTO> noteDTOList =
+                    noteService.getAllNotes()
+                            .stream().map(this::convertToNoteDTO)
+                            .collect(Collectors.toList());
+            return new ResponseEntity<>(noteDTOList, HttpStatus.OK);
+        } catch (Exception e) {
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+
     }
 
     @GetMapping("/{id}")
@@ -51,10 +63,18 @@ public class NoteController {
             summary = "Вывод заметки с определенным id",
             description = "Позволяет вывести конкретную заметку"
     )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Успешный запрос. Вывод заметки с указанным id."),
+            @ApiResponse(responseCode = "404", description = "Заметка с указанным id не найдена.")
+    })
     public ResponseEntity<NoteDTO> findOneNote(@PathVariable Long id) {
-        Note note = noteService.getOneNote(id);
-        NoteDTO noteDTO = convertToNoteDTO(note);
-        return new ResponseEntity<>(noteDTO, HttpStatus.OK);
+        try {
+            Note note = noteService.getOneNote(id);
+            NoteDTO noteDTO = convertToNoteDTO(note);
+            return new ResponseEntity<>(noteDTO, HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @PostMapping("/create")
@@ -62,13 +82,21 @@ public class NoteController {
             summary = "Создание заметки",
             description = "Позволяет создавать заметки"
     )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Успешный запрос. Заметка создана."),
+            @ApiResponse(responseCode = "400", description = "Произошла ошибка при создании заметки.")
+            })
     public ResponseEntity<?> createNote(@RequestBody @Validated CreateOrUpdateNoteDTO createOrUpdateNoteDTO,
                                                  BindingResult bindingResult, Principal principal) {
         if (bindingResult.hasErrors()) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body("Validation errors");
         }
-        noteService.createNote(convertCreateOrUpdateNote(createOrUpdateNoteDTO), principal);
-        return ResponseEntity.ok(HttpStatus.OK);
+        try {
+            noteService.createNote(convertCreateOrUpdateNote(createOrUpdateNoteDTO), principal);
+            return ResponseEntity.status(HttpStatus.CREATED).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error creating note");
+        }
     }
 
     @PostMapping("/update/{id}")
@@ -76,14 +104,23 @@ public class NoteController {
             summary = "Редактирование заметки",
             description = "Позволяет редактировать конкретную заметку"
     )
-    public ResponseEntity<HttpStatus> updateNote(@RequestBody @Validated CreateOrUpdateNoteDTO createOrUpdateNoteDTO,
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Успешный запрос. Заметка с указанным id обновлена."),
+            @ApiResponse(responseCode = "400", description = "Произошла ошибка при обновлении заметки с указанным id..")
+    })
+    public ResponseEntity<?> updateNote(@RequestBody @Validated CreateOrUpdateNoteDTO createOrUpdateNoteDTO,
                                                  BindingResult bindingResult, Principal principal,
                                                  @PathVariable Long id) {
         if (bindingResult.hasErrors()) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body("Validation errors");
         }
-        noteService.updateNote(id, convertCreateOrUpdateNote(createOrUpdateNoteDTO), principal);
-        return ResponseEntity.ok(HttpStatus.OK);
+        try {
+            noteService.updateNote(id, convertCreateOrUpdateNote(createOrUpdateNoteDTO), principal);
+            return ResponseEntity.status(HttpStatus.OK).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating note");
+        }
+
     }
 
 
@@ -92,9 +129,18 @@ public class NoteController {
             summary = "Удаление конкретной заметки",
             description = "Позволяет удалять конкретную заметку"
     )
-    public ResponseEntity<HttpStatus> deleteOneNote(@PathVariable Long id, Principal principal) {
-        noteService.deleteOneNote(id, principal);
-        return ResponseEntity.ok(HttpStatus.OK);
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Успешный запрос. Заметка с указанным id удалена."),
+            @ApiResponse(responseCode = "400", description = "Произошла ошибка при удалении заметки с указанным id.")
+    })
+    public ResponseEntity<?> deleteOneNote(@PathVariable Long id, Principal principal) {
+        try {
+            noteService.deleteOneNote(id, principal);
+            return ResponseEntity.status(HttpStatus.OK).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error deleting note");
+        }
+
     }
 
 

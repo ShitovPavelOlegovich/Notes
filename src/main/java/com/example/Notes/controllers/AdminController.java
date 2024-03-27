@@ -7,6 +7,8 @@ import com.example.Notes.service.PersonService;
 import com.example.Notes.util.PersonEmailValidator;
 import com.example.Notes.util.PersonValidatorUsername;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -43,15 +45,24 @@ public class AdminController {
             summary = "Редактирование конкретного администратора",
             description = "Позволяет редактировать конкретного администратора"
     )
-    public ResponseEntity<HttpStatus> updateAdmin(@RequestBody @Valid PersonDTO personDTO,
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Успешный запрос. Редактирование администратора с указанным id."),
+            @ApiResponse(responseCode = "400", description = "Ошибка. Произошла ошибка при редактирование администратора с указанным id .")
+    })
+    public ResponseEntity<?> updateAdmin(@RequestBody @Valid PersonDTO personDTO,
                                                    BindingResult bindingResult, @PathVariable Long id) {
         personValidatorUsername.validate(personDTO, bindingResult);
         personEmailValidator.validate(personDTO, bindingResult);
         if(bindingResult.hasErrors()) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body("Validation errors");
         }
-        adminService.updateAdmin(id, convertToPerson(personDTO));
-        return ResponseEntity.ok(HttpStatus.OK);
+        try {
+            adminService.updateAdmin(id, convertToPerson(personDTO));
+            return ResponseEntity.status(HttpStatus.OK).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating admin");
+        }
+
     }
 
     @PostMapping("/update/person/{id}")
@@ -59,15 +70,24 @@ public class AdminController {
             summary = "Редактирование конкретного пользователя",
             description = "Позволяет редактировать конкретного пользователя"
     )
-    public ResponseEntity<HttpStatus> updatePerson(@RequestBody @Valid PersonDTO personDTO,
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Успешный запрос. Данные пользователя с указанным id обновлены."),
+            @ApiResponse(responseCode = "400", description = "Произошла ошибка. Данные пользователя с указанным id не обновлены. ")
+    })
+    public ResponseEntity<?> updatePerson(@RequestBody @Valid PersonDTO personDTO,
                                                    BindingResult bindingResult, @PathVariable Long id) {
         personValidatorUsername.validate(personDTO, bindingResult);
         personEmailValidator.validate(personDTO, bindingResult);
         if(bindingResult.hasErrors()) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body("Validation errors");
         }
-        adminService.updatePerson(id, convertToPerson(personDTO));
-        return ResponseEntity.ok(HttpStatus.OK);
+        try {
+            adminService.updatePerson(id, convertToPerson(personDTO));
+            return ResponseEntity.status(HttpStatus.OK).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating person");
+        }
+
     }
 
     @DeleteMapping("/delete/person/{id}")
@@ -75,9 +95,18 @@ public class AdminController {
             summary = "Удаление пользователя с определенным id",
             description = "Позволяет удалять конкретного пользователя"
     )
-    public ResponseEntity<HttpStatus> deletePerson(@PathVariable Long id) {
-        personService.deletePerson(id);
-        return ResponseEntity.ok(HttpStatus.OK);
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Успешный запрос. Данный пользователь с указанным id удален."),
+            @ApiResponse(responseCode = "400", description = "Произошла ошибка. Данный пользователь с указанным id не удален. ")
+    })
+    public ResponseEntity<?> deletePerson(@PathVariable Long id) {
+        try {
+            personService.deletePerson(id);
+            return ResponseEntity.status(HttpStatus.OK).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error deleting person");
+        }
+
     }
 
     @DeleteMapping("/delete/admin/{id}")
@@ -85,9 +114,17 @@ public class AdminController {
             summary = "Удаление администратора с определенным id",
             description = "Позволяет удалять конкретного администратора"
     )
-    public ResponseEntity<HttpStatus> deleteAdmin(@PathVariable Long id) {
-        adminService.deleteAdmin(id);
-        return ResponseEntity.ok(HttpStatus.OK);
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Успешный запрос. Данный администратор с указанным id удален."),
+            @ApiResponse(responseCode = "400", description = "Произошла ошибка. Данный администратор с указанным id не удален. ")
+    })
+    public ResponseEntity<?> deleteAdmin(@PathVariable Long id) {
+        try {
+            adminService.deleteAdmin(id);
+            return ResponseEntity.status(HttpStatus.OK).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error deleting admin");
+        }
     }
 
     private Person convertToPerson(PersonDTO personDTO) {

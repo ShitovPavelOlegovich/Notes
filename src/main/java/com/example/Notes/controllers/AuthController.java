@@ -8,6 +8,8 @@ import com.example.Notes.service.PersonService;
 import com.example.Notes.util.PersonEmailValidator;
 import com.example.Notes.util.PersonValidatorUsername;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -49,6 +51,10 @@ public class AuthController {
             summary = "Аутентификация пользователя",
             description = "Позволяет пройти аутентификацию пользователю"
     )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Успешный запрос. Аутентификация прошла успешна."),
+            @ApiResponse(responseCode = "401", description = "Ошибка. Аутентификация не пройдена.")
+    })
     public ResponseEntity<?> authPerson(@RequestBody UserLoginRequest userLoginRequest) {
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(userLoginRequest.getUsername(), userLoginRequest.getPassword());
         try{
@@ -69,15 +75,24 @@ public class AuthController {
             summary = "Регистрация пользователя",
             description = "Позволяет пройти регистрацию пользователю"
     )
-    public ResponseEntity<HttpStatus> registrationPerson(@RequestBody @Valid PersonDTO personDTO,
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Успешный запрос. Регистрация прошла успешна."),
+            @ApiResponse(responseCode = "400", description = "Ошибка. Регистрация не пройдена.")
+    })
+    public ResponseEntity<?> registrationPerson(@RequestBody @Valid PersonDTO personDTO,
                                                          BindingResult bindingResult) {
         personValidatorUsername.validate(personDTO, bindingResult);
         personEmailValidator.validate(personDTO, bindingResult);
         if(bindingResult.hasErrors()) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body("Validation errors");
         }
-        personService.createPerson(convertToPerson(personDTO));
-        return ResponseEntity.ok(HttpStatus.OK);
+        try {
+            personService.createPerson(convertToPerson(personDTO));
+            return ResponseEntity.status(HttpStatus.OK).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error registration person");
+        }
+
     }
 
     @PostMapping("/registration/admin")
@@ -85,15 +100,24 @@ public class AuthController {
             summary = "Регистрация администратора",
             description = "Позволяет пройти регистрацию администратору"
     )
-    public ResponseEntity<HttpStatus> registrationAdmin(@RequestBody @Valid PersonDTO personDTO,
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Успешный запрос. Регистрация прошла успешна."),
+            @ApiResponse(responseCode = "400", description = "Ошибка. Регистрация не пройдена.")
+    })
+    public ResponseEntity<?> registrationAdmin(@RequestBody @Valid PersonDTO personDTO,
                                                          BindingResult bindingResult) {
         personValidatorUsername.validate(personDTO, bindingResult);
         personEmailValidator.validate(personDTO, bindingResult);
         if(bindingResult.hasErrors()) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body("Validation errors");
         }
-        adminService.createAdmin(convertToPerson(personDTO));
-        return ResponseEntity.ok(HttpStatus.OK);
+        try {
+            adminService.createAdmin(convertToPerson(personDTO));
+            return ResponseEntity.status(HttpStatus.OK).build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error registration admin");
+        }
+
     }
     private Person convertToPerson(PersonDTO personDTO) {
         return modelMapper.map(personDTO, Person.class);
