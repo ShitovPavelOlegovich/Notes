@@ -3,6 +3,8 @@ package com.example.Notes.models;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotEmpty;
@@ -14,6 +16,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Audited
 public class Note {
 
     @Id
@@ -37,6 +40,7 @@ public class Note {
     @Column(name = "date_of_update")
     private LocalDateTime dateOfUpdate;
 
+    @NotAudited
     @ManyToOne(cascade = CascadeType.REFRESH)
     @JoinColumn(name = "person_id", referencedColumnName = "id")
     private Person ownerPerson;

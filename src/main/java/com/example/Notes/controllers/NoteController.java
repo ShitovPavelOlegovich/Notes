@@ -50,7 +50,11 @@ public class NoteController {
                     noteService.getAllNotes()
                             .stream().map(this::convertToNoteDTO)
                             .collect(Collectors.toList());
-            return new ResponseEntity<>(noteDTOList, HttpStatus.OK);
+            if (!noteDTOList.isEmpty()) {
+                return ResponseEntity.ok(noteDTOList);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
         } catch (Exception e) {
 
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -72,6 +76,30 @@ public class NoteController {
             Note note = noteService.getOneNote(id);
             NoteDTO noteDTO = convertToNoteDTO(note);
             return new ResponseEntity<>(noteDTO, HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/all/versions/notes/{id}")
+    @Operation(
+            summary = "Вывод всех версий заметок с определенным id",
+            description = "Позволяет вывести все версии заметок с определенным id"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Успешный запрос. Вывод всех версий заметок с указанным id."),
+            @ApiResponse(responseCode = "404", description = "Заметка с указанным id не найдена.")
+    })
+    public ResponseEntity<List<NoteDTO>> getNoteVersions(@PathVariable Long id) {
+        try {
+            List<NoteDTO> revisions = noteService.getOneNotesRevision(id)
+                    .stream().map(this::convertToNoteDTO)
+                    .collect(Collectors.toList());
+            if (!revisions.isEmpty()) {
+                return ResponseEntity.ok(revisions);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
@@ -123,7 +151,6 @@ public class NoteController {
 
     }
 
-
     @DeleteMapping("/delete/{id}")
     @Operation(
             summary = "Удаление конкретной заметки",
@@ -142,7 +169,6 @@ public class NoteController {
         }
 
     }
-
 
     private Note convertToNote(NoteDTO noteDTO) {
         return modelMapper.map(noteDTO, Note.class);
